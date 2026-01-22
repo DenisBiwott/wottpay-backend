@@ -39,6 +39,27 @@ export class UserRepository implements IUserRepository {
     await this.userModel.findByIdAndUpdate(id, user).exec();
   }
 
+  async findAll(options?: { skip?: number; limit?: number }): Promise<User[]> {
+    const query = this.userModel.find();
+    if (options?.skip) {
+      query.skip(options.skip);
+    }
+    if (options?.limit) {
+      query.limit(options.limit);
+    }
+    const userDocs = await query.exec();
+    return userDocs.map((doc) => this.toDomainEntity(doc));
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const result = await this.userModel.findByIdAndDelete(id).exec();
+    return result !== null;
+  }
+
+  async count(): Promise<number> {
+    return this.userModel.countDocuments().exec();
+  }
+
   private toDomainEntity(userDoc: UserDocument): User {
     return new User(
       userDoc._id.toString(),

@@ -33,6 +33,35 @@ export class BusinessRepository implements IBusinessRepository {
     await this.businessModel.findByIdAndUpdate(id, business).exec();
   }
 
+  async findByName(name: string): Promise<Business | null> {
+    const businessDoc = await this.businessModel.findOne({ name }).exec();
+    return businessDoc ? this.toDomainEntity(businessDoc) : null;
+  }
+
+  async findAll(options?: {
+    skip?: number;
+    limit?: number;
+  }): Promise<Business[]> {
+    const query = this.businessModel.find();
+    if (options?.skip) {
+      query.skip(options.skip);
+    }
+    if (options?.limit) {
+      query.limit(options.limit);
+    }
+    const businessDocs = await query.exec();
+    return businessDocs.map((doc) => this.toDomainEntity(doc));
+  }
+
+  async delete(id: string): Promise<boolean> {
+    const result = await this.businessModel.findByIdAndDelete(id).exec();
+    return result !== null;
+  }
+
+  async count(): Promise<number> {
+    return this.businessModel.countDocuments().exec();
+  }
+
   private toDomainEntity(businessDoc: BusinessDocument): Business {
     return new Business(
       businessDoc._id.toString(),
