@@ -3,6 +3,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
+import { UserModule } from './infrastructure/modules/user.module';
+import { BusinessModule } from './infrastructure/modules/business.module';
 
 @Module({
   imports: [
@@ -14,6 +16,9 @@ import { ConfigModule } from '@nestjs/config';
     MongooseModule.forRoot(
       process.env.MONGODB_URI || 'mongodb://localhost/nest',
     ),
+    // Feature modules
+    UserModule,
+    BusinessModule,
   ],
   controllers: [AppController],
   providers: [AppService],
