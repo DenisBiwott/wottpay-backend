@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigModule } from '@nestjs/config';
 import { UserModule } from './infrastructure/modules/user.module';
 import { BusinessModule } from './infrastructure/modules/business.module';
+import { AuthModule } from './infrastructure/modules/auth.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { BusinessModule } from './infrastructure/modules/business.module';
       process.env.MONGODB_URI || 'mongodb://localhost/nest',
     ),
     // Feature modules
+    AuthModule,
     UserModule,
     BusinessModule,
   ],
