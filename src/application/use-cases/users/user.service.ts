@@ -1,4 +1,9 @@
-import { Injectable, Inject, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import type { IUserRepository } from 'src/domain/repositories/user.repo';
 import { User } from 'src/domain/entities/user.entity';
@@ -49,7 +54,15 @@ export class UserService {
     return UserResponseDto.fromEntity(user);
   }
 
-  async findAll(page: number = 1, limit: number = 10): Promise<{ data: UserResponseDto[]; total: number; page: number; limit: number }> {
+  async findAll(
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{
+    data: UserResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const skip = (page - 1) * limit;
     const [users, total] = await Promise.all([
       this.userRepository.findAll({ skip, limit }),
@@ -79,9 +92,11 @@ export class UserService {
 
     const updateData: UserUpdateData = {};
     if (dto.email) updateData.email = dto.email;
-    if (dto.password) updateData.passwordHash = await bcrypt.hash(dto.password, 10);
+    if (dto.password)
+      updateData.passwordHash = await bcrypt.hash(dto.password, 10);
     if (dto.role) updateData.role = dto.role;
-    if (dto.isTotpEnabled !== undefined) updateData.isTotpEnabled = dto.isTotpEnabled;
+    if (dto.isTotpEnabled !== undefined)
+      updateData.isTotpEnabled = dto.isTotpEnabled;
 
     await this.userRepository.update(id, updateData);
     const updatedUser = await this.userRepository.findById(id);
