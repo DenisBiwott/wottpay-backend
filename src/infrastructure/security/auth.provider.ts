@@ -33,7 +33,10 @@ export class AuthProvider implements IAuthProvider {
   }
 
   async verifyTOTP(token: string, secret: string): Promise<boolean> {
-    const result = await this.totp.verify(token, { secret, epochTolerance: 30 });
+    const result = await this.totp.verify(token, {
+      secret,
+      epochTolerance: 30,
+    });
     return result.valid;
   }
 
