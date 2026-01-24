@@ -6,12 +6,16 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import type { IUserRepository } from 'src/domain/repositories/user.repo';
+import type { IRefreshTokenRepository } from 'src/domain/repositories/refresh-token.repo';
 import type { IAuthProvider } from 'src/domain/services/iauth.provider';
+import { RefreshToken } from 'src/domain/entities/refresh-token.entity';
 import { LoginDto } from 'src/application/dtos/auth/login.dto';
 import { VerifyTotpDto } from 'src/application/dtos/auth/verify-totp.dto';
 import { SetupTotpDto } from 'src/application/dtos/auth/setup-totp.dto';
+import { RefreshTokenDto } from 'src/application/dtos/auth/refresh-token.dto';
 import {
   AuthResponseDto,
+  RefreshTokenResponseDto,
   TotpSetupResponseDto,
   TotpVerifyResponseDto,
 } from 'src/application/dtos/auth/auth-response.dto';
@@ -21,6 +25,8 @@ export class AuthService {
   constructor(
     @Inject('IUserRepository')
     private readonly userRepository: IUserRepository,
+    @Inject('IRefreshTokenRepository')
+    private readonly refreshTokenRepository: IRefreshTokenRepository,
     @Inject('IAuthProvider')
     private readonly authProvider: IAuthProvider,
   ) {}
@@ -56,8 +62,12 @@ export class AuthService {
 
     const accessToken = this.authProvider.generateJWT(payload);
 
+    // Generate and store refresh token
+    const refreshToken = await this.createRefreshToken(user.id);
+
     return {
       accessToken,
+      refreshToken,
       requiresTotp: requiresTotp,
       user: {
         id: user.id,
@@ -97,8 +107,12 @@ export class AuthService {
 
     const accessToken = this.authProvider.generateJWT(payload);
 
+    // Generate new refresh token after TOTP verification
+    const refreshToken = await this.createRefreshToken(user.id);
+
     return {
       accessToken,
+      refreshToken,
       message: 'TOTP verified successfully',
     };
   }
@@ -199,5 +213,66 @@ export class AuthService {
       role: user.role,
       isTotpEnabled: user.isTotpEnabled,
     };
+  }
+
+  async refreshTokens(dto: RefreshTokenDto): Promise<RefreshTokenResponseDto> {
+    const storedToken = await this.refreshTokenRepository.findByToken(
+      dto.refreshToken,
+    );
+
+    if (!storedToken) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    if (!storedToken.isValid()) {
+      throw new UnauthorizedException('Refresh token expired or revoked');
+    }
+
+    const user = await this.userRepository.findById(storedToken.userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Revoke the old refresh token (rotation)
+    await this.refreshTokenRepository.revoke(dto.refreshToken);
+
+    // Generate new access token
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      totpVerified: true, // User was already verified
+    };
+    const accessToken = this.authProvider.generateJWT(payload);
+
+    // Generate new refresh token
+    const refreshToken = await this.createRefreshToken(user.id);
+
+    return {
+      accessToken,
+      refreshToken,
+    };
+  }
+
+  async logout(userId: string): Promise<{ message: string }> {
+    await this.refreshTokenRepository.revokeAllForUser(userId);
+    return { message: 'Logged out successfully' };
+  }
+
+  private async createRefreshToken(userId: string): Promise<string> {
+    const token = this.authProvider.generateRefreshToken();
+    const expiresAt = this.authProvider.getRefreshTokenExpiresAt();
+
+    const refreshToken = new RefreshToken(
+      '', // ID will be assigned by MongoDB
+      token,
+      userId,
+      expiresAt,
+      new Date(),
+      false,
+    );
+
+    await this.refreshTokenRepository.create(refreshToken);
+    return token;
   }
 }

@@ -2,12 +2,18 @@ import { UserRole } from 'src/domain/enums/user-role.enum';
 
 export class AuthResponseDto {
   accessToken: string;
+  refreshToken: string;
   requiresTotp: boolean;
   user: {
     id: string;
     email: string;
     role: UserRole;
   };
+}
+
+export class RefreshTokenResponseDto {
+  accessToken: string;
+  refreshToken: string;
 }
 
 export class TotpSetupResponseDto {
@@ -17,5 +23,6 @@ export class TotpSetupResponseDto {
 
 export class TotpVerifyResponseDto {
   accessToken: string;
+  refreshToken: string;
   message: string;
 }

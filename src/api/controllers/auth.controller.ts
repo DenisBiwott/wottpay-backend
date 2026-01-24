@@ -10,6 +10,7 @@ import { AuthService } from 'src/application/use-cases/auth/auth.service';
 import { LoginDto } from 'src/application/dtos/auth/login.dto';
 import { VerifyTotpDto } from 'src/application/dtos/auth/verify-totp.dto';
 import { SetupTotpDto } from 'src/application/dtos/auth/setup-totp.dto';
+import { RefreshTokenDto } from 'src/application/dtos/auth/refresh-token.dto';
 import { JwtAuthGuard } from 'src/infrastructure/security/jwt-auth.guard';
 import { Public } from 'src/infrastructure/security/decorators';
 
@@ -54,5 +55,17 @@ export class AuthController {
   @Get('profile')
   async getProfile(@Request() req: any) {
     return this.authService.getProfile(req.user.id);
+  }
+
+  @Public()
+  @Post('refresh')
+  async refreshTokens(@Body() refreshTokenDto: RefreshTokenDto) {
+    return this.authService.refreshTokens(refreshTokenDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  async logout(@Request() req: any) {
+    return this.authService.logout(req.user.id);
   }
 }

@@ -1,15 +1,21 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { TOTP } from '@otplib/totp';
 import { NobleCryptoPlugin } from '@otplib/plugin-crypto-noble';
 import { ScureBase32Plugin } from '@otplib/plugin-base32-scure';
+import { randomBytes } from 'crypto';
 import { IAuthProvider } from 'src/domain/services/iauth.provider';
 
 @Injectable()
 export class AuthProvider implements IAuthProvider {
   private totp: TOTP;
+  private readonly refreshTokenExpiresInDays: number;
 
-  constructor(private readonly jwtService: JwtService) {
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+  ) {
     // Configure TOTP with modern, audited cryptographic implementations:
     // - NobleCryptoPlugin: Uses @noble/hashes for HMAC-SHA1 (required by TOTP RFC 6238)
     // - ScureBase32Plugin: Uses @scure/base for RFC 4648 compliant base32 encoding
@@ -19,6 +25,14 @@ export class AuthProvider implements IAuthProvider {
       crypto: new NobleCryptoPlugin(),
       base32: new ScureBase32Plugin(),
     });
+
+    // Refresh token expiration (default: 7 days)
+    const expiresInDays = this.configService.get<string>(
+      'REFRESH_TOKEN_EXPIRES_IN_DAYS',
+    );
+    this.refreshTokenExpiresInDays = expiresInDays
+      ? parseInt(expiresInDays, 10)
+      : 7;
   }
 
   generateJWT(payload: object): string {
@@ -51,5 +65,15 @@ export class AuthProvider implements IAuthProvider {
 
   generateTOTPUri(secret: string, email: string, issuer: string): string {
     return this.totp.toURI({ secret, label: email, issuer });
+  }
+
+  generateRefreshToken(): string {
+    return randomBytes(64).toString('hex');
+  }
+
+  getRefreshTokenExpiresAt(): Date {
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + this.refreshTokenExpiresInDays);
+    return expiresAt;
   }
 }
