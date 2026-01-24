@@ -21,6 +21,7 @@ A payment processing backend built with NestJS, integrating with PesaPal payment
 ```
 
 **Layer Responsibilities:**
+
 - **API**: HTTP request handling, authentication guards, route definitions
 - **Application**: Business logic orchestration, data transformation (DTOs)
 - **Domain**: Core business entities, repository contracts, enums
@@ -28,15 +29,15 @@ A payment processing backend built with NestJS, integrating with PesaPal payment
 
 ## Tech Stack
 
-| Technology | Purpose |
-|------------|---------|
-| NestJS 11 | Application framework |
-| MongoDB + Mongoose | Database and ODM |
-| Passport + JWT | Authentication |
-| TOTP (otplib) | Two-factor authentication |
-| Axios | HTTP client for PesaPal API |
-| bcrypt | Password hashing |
-| class-validator | Request validation |
+| Technology         | Purpose                     |
+| ------------------ | --------------------------- |
+| NestJS 11          | Application framework       |
+| MongoDB + Mongoose | Database and ODM            |
+| Passport + JWT     | Authentication              |
+| TOTP (otplib)      | Two-factor authentication   |
+| Axios              | HTTP client for PesaPal API |
+| bcrypt             | Password hashing            |
+| class-validator    | Request validation          |
 
 ## Prerequisites
 
@@ -47,13 +48,13 @@ A payment processing backend built with NestJS, integrating with PesaPal payment
 
 ## Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `MONGODB_URI` | MongoDB connection string | Yes |
-| `JWT_SECRET` | Secret key for JWT token signing | Yes |
-| `JWT_EXPIRES_IN` | JWT token expiration (e.g., `1h`, `7d`) | Yes |
-| `ENCRYPTION_KEY` | Key for encrypting sensitive credentials | Yes |
-| `PESAPAL_BASE_URL` | PesaPal API base URL | No (defaults to sandbox) |
+| Variable           | Description                              | Required                 |
+| ------------------ | ---------------------------------------- | ------------------------ |
+| `MONGODB_URI`      | MongoDB connection string                | Yes                      |
+| `JWT_SECRET`       | Secret key for JWT token signing         | Yes                      |
+| `JWT_EXPIRES_IN`   | JWT token expiration (e.g., `1h`, `7d`)  | Yes                      |
+| `ENCRYPTION_KEY`   | Key for encrypting sensitive credentials | Yes                      |
+| `PESAPAL_BASE_URL` | PesaPal API base URL                     | No (defaults to sandbox) |
 
 Copy `.env.example` to `.env` and configure your values.
 
@@ -76,52 +77,56 @@ npm run start:prod
 ## API Endpoints
 
 ### Authentication
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/login` | User login |
-| POST | `/auth/setup-totp` | Setup 2FA |
-| POST | `/auth/verify-totp` | Verify TOTP code |
+
+| Method | Endpoint            | Description      |
+| ------ | ------------------- | ---------------- |
+| POST   | `/auth/login`       | User login       |
+| POST   | `/auth/setup-totp`  | Setup 2FA        |
+| POST   | `/auth/verify-totp` | Verify TOTP code |
 
 ### Users
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/users` | Create user |
-| GET | `/users/:id` | Get user by ID |
-| PUT | `/users/:id` | Update user |
+
+| Method | Endpoint     | Description    |
+| ------ | ------------ | -------------- |
+| POST   | `/users`     | Create user    |
+| GET    | `/users/:id` | Get user by ID |
+| PUT    | `/users/:id` | Update user    |
 
 ### Businesses
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/businesses` | Create business |
-| GET | `/businesses/:id` | Get business |
-| PUT | `/businesses/:id` | Update business |
-| PUT | `/businesses/:id/credentials` | Update PesaPal credentials |
+
+| Method | Endpoint                      | Description                |
+| ------ | ----------------------------- | -------------------------- |
+| POST   | `/businesses`                 | Create business            |
+| GET    | `/businesses/:id`             | Get business               |
+| PUT    | `/businesses/:id`             | Update business            |
+| PATCH  | `/businesses/:id/credentials` | Update PesaPal credentials |
 
 ### Payments
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/payments/orders` | Create payment order |
-| GET | `/payments/orders/:trackingId` | Get order by tracking ID |
-| GET | `/payments/orders/:trackingId/status` | Get transaction status |
-| DELETE | `/payments/orders/:trackingId` | Cancel order |
-| POST | `/payments/ipn/register` | Register IPN endpoint |
-| GET | `/payments/ipn/:businessId` | Get registered IPNs |
-| POST | `/payments/ipn/callback` | Handle IPN callback |
-| GET | `/payments/business/:businessId` | Get business payments |
+
+| Method | Endpoint                              | Description              |
+| ------ | ------------------------------------- | ------------------------ |
+| POST   | `/payments/orders`                    | Create payment order     |
+| GET    | `/payments/orders/:trackingId`        | Get order by tracking ID |
+| GET    | `/payments/orders/:trackingId/status` | Get transaction status   |
+| DELETE | `/payments/orders/:trackingId`        | Cancel order             |
+| POST   | `/payments/ipn/register`              | Register IPN endpoint    |
+| GET    | `/payments/ipn/:businessId`           | Get registered IPNs      |
+| POST   | `/payments/ipn/callback`              | Handle IPN callback      |
+| GET    | `/payments/business/:businessId`      | Get business payments    |
 
 ## NPM Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run start:dev` | Start with hot reload |
-| `npm run start:debug` | Start with debugger |
-| `npm run start:prod` | Start production build |
-| `npm run build` | Build TypeScript |
-| `npm run lint` | Run ESLint with auto-fix |
-| `npm run format` | Run Prettier |
-| `npm run test` | Run unit tests |
-| `npm run test:e2e` | Run end-to-end tests |
-| `npm run test:cov` | Run tests with coverage |
+| Script                | Description              |
+| --------------------- | ------------------------ |
+| `npm run start:dev`   | Start with hot reload    |
+| `npm run start:debug` | Start with debugger      |
+| `npm run start:prod`  | Start production build   |
+| `npm run build`       | Build TypeScript         |
+| `npm run lint`        | Run ESLint with auto-fix |
+| `npm run format`      | Run Prettier             |
+| `npm run test`        | Run unit tests           |
+| `npm run test:e2e`    | Run end-to-end tests     |
+| `npm run test:cov`    | Run tests with coverage  |
 
 ## Project Structure
 
