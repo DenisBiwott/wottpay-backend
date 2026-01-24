@@ -10,6 +10,11 @@ export class AuthProvider implements IAuthProvider {
   private totp: TOTP;
 
   constructor(private readonly jwtService: JwtService) {
+    // Configure TOTP with modern, audited cryptographic implementations:
+    // - NobleCryptoPlugin: Uses @noble/hashes for HMAC-SHA1 (required by TOTP RFC 6238)
+    // - ScureBase32Plugin: Uses @scure/base for RFC 4648 compliant base32 encoding
+    // These plugins replace Node.js crypto module for better cross-platform compatibility
+    // and are maintained by the same author as otplib.
     this.totp = new TOTP({
       crypto: new NobleCryptoPlugin(),
       base32: new ScureBase32Plugin(),

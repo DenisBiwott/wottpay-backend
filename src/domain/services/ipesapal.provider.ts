@@ -120,29 +120,74 @@ export interface PesapalCancelOrderResponse {
   };
 }
 
+/**
+ * PesaPal payment provider interface.
+ * Defines the contract for interacting with PesaPal's payment gateway API.
+ * Implementations should handle HTTP communication and error responses.
+ */
 export interface IPesapalProvider {
+  /**
+   * Authenticate with PesaPal to obtain an access token.
+   * Tokens are typically valid for a limited time and should be cached.
+   * @param consumerKey - PesaPal merchant consumer key
+   * @param consumerSecret - PesaPal merchant consumer secret
+   * @returns Authentication response containing token and expiry
+   */
   getAccessToken(
     consumerKey: string,
     consumerSecret: string,
   ): Promise<PesapalAuthResponse>;
 
+  /**
+   * Register an IPN (Instant Payment Notification) endpoint with PesaPal.
+   * PesaPal will send payment status updates to this URL.
+   * @param token - Valid access token
+   * @param request - IPN registration details (URL and notification type)
+   * @returns Registration response with assigned IPN ID
+   */
   registerIpn(
     token: string,
     request: PesapalRegisterIpnRequest,
   ): Promise<PesapalRegisterIpnResponse>;
 
+  /**
+   * Retrieve all registered IPN endpoints for the merchant.
+   * @param token - Valid access token
+   * @returns List of registered IPN endpoints
+   */
   getRegisteredIpns(token: string): Promise<PesapalIpnListItem[]>;
 
+  /**
+   * Submit a new payment order to PesaPal.
+   * Creates a payment request and returns a redirect URL for the customer.
+   * @param token - Valid access token
+   * @param request - Order details including amount, currency, and billing info
+   * @returns Order response with tracking ID and redirect URL
+   */
   submitOrder(
     token: string,
     request: PesapalSubmitOrderRequest,
   ): Promise<PesapalSubmitOrderResponse>;
 
+  /**
+   * Query the current status of a transaction.
+   * Use this to verify payment completion or check for failures.
+   * @param token - Valid access token
+   * @param orderTrackingId - PesaPal order tracking ID
+   * @returns Transaction status including payment method and confirmation code
+   */
   getTransactionStatus(
     token: string,
     orderTrackingId: string,
   ): Promise<PesapalTransactionStatusResponse>;
 
+  /**
+   * Cancel a pending payment order.
+   * Only pending orders can be cancelled; completed orders require refunds.
+   * @param token - Valid access token
+   * @param orderTrackingId - PesaPal order tracking ID to cancel
+   * @returns Cancellation response with status
+   */
   cancelOrder(
     token: string,
     orderTrackingId: string,

@@ -15,11 +15,23 @@ export class EncryptionService {
     if (!key) {
       throw new Error('ENCRYPTION_KEY environment variable is required');
     }
+    // Derive a fixed-length 256-bit key from the user-provided password using scrypt.
+    // This ensures consistent key length regardless of ENCRYPTION_KEY length.
     this.encryptionKey = crypto.scryptSync(key, 'salt', this.keyLength);
   }
 
+  /**
+   * Encrypts plaintext using AES-256-GCM authenticated encryption.
+   *
+   * The encryption process:
+   * 1. Generate a random 16-byte IV (nonce) for each encryption
+   * 2. Encrypt the plaintext with AES-256-GCM
+   * 3. Extract the authentication tag (provides integrity verification)
+   * 4. Combine IV, auth tag, and ciphertext into a single string
+   *
+   * @returns Encrypted string in format: "iv:authTag:ciphertext" (all hex-encoded)
+   */
   encrypt(plainText: string): string {
-    // Nonce
     const iv = crypto.randomBytes(this.ivLength);
     const cipher = crypto.createCipheriv(
       this.algorithm,
@@ -33,6 +45,7 @@ export class EncryptionService {
     const authTag = cipher.getAuthTag();
 
     // Format: iv:authTag:encryptedData (all in hex)
+    // The IV and authTag are required for decryption and integrity verification
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
   }
 

@@ -1,98 +1,166 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# WottPay Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A payment processing backend built with NestJS, integrating with PesaPal payment gateway. Built using Clean Architecture principles for maintainability and testability.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Architecture
 
-## Description
-
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
-
-```bash
-$ npm install
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                          API Layer                              │
+│                    (Controllers, Guards)                        │
+├─────────────────────────────────────────────────────────────────┤
+│                      Application Layer                          │
+│                   (Use Cases, DTOs, Services)                   │
+├─────────────────────────────────────────────────────────────────┤
+│                        Domain Layer                             │
+│            (Entities, Repository Interfaces, Enums)             │
+├─────────────────────────────────────────────────────────────────┤
+│                     Infrastructure Layer                        │
+│     (Database, External APIs, Security, Module Configuration)   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Compile and run the project
+**Layer Responsibilities:**
+- **API**: HTTP request handling, authentication guards, route definitions
+- **Application**: Business logic orchestration, data transformation (DTOs)
+- **Domain**: Core business entities, repository contracts, enums
+- **Infrastructure**: Technical implementations (MongoDB, PesaPal, JWT, encryption)
+
+## Tech Stack
+
+| Technology | Purpose |
+|------------|---------|
+| NestJS 11 | Application framework |
+| MongoDB + Mongoose | Database and ODM |
+| Passport + JWT | Authentication |
+| TOTP (otplib) | Two-factor authentication |
+| Axios | HTTP client for PesaPal API |
+| bcrypt | Password hashing |
+| class-validator | Request validation |
+
+## Prerequisites
+
+- Node.js 18+
+- npm 9+
+- MongoDB 6+
+- PesaPal merchant account (for payment processing)
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `MONGODB_URI` | MongoDB connection string | Yes |
+| `JWT_SECRET` | Secret key for JWT token signing | Yes |
+| `JWT_EXPIRES_IN` | JWT token expiration (e.g., `1h`, `7d`) | Yes |
+| `ENCRYPTION_KEY` | Key for encrypting sensitive credentials | Yes |
+| `PESAPAL_BASE_URL` | PesaPal API base URL | No (defaults to sandbox) |
+
+Copy `.env.example` to `.env` and configure your values.
+
+## Getting Started
 
 ```bash
-# development
-$ npm run start
+# Install dependencies
+npm install
 
-# watch mode
-$ npm run start:dev
+# Start development server (with hot reload)
+npm run start:dev
 
-# production mode
-$ npm run start:prod
+# Build for production
+npm run build
+
+# Start production server
+npm run start:prod
 ```
 
-## Run tests
+## API Endpoints
 
-```bash
-# unit tests
-$ npm run test
+### Authentication
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/login` | User login |
+| POST | `/auth/setup-totp` | Setup 2FA |
+| POST | `/auth/verify-totp` | Verify TOTP code |
 
-# e2e tests
-$ npm run test:e2e
+### Users
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/users` | Create user |
+| GET | `/users/:id` | Get user by ID |
+| PUT | `/users/:id` | Update user |
 
-# test coverage
-$ npm run test:cov
+### Businesses
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/businesses` | Create business |
+| GET | `/businesses/:id` | Get business |
+| PUT | `/businesses/:id` | Update business |
+| PUT | `/businesses/:id/credentials` | Update PesaPal credentials |
+
+### Payments
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/payments/orders` | Create payment order |
+| GET | `/payments/orders/:trackingId` | Get order by tracking ID |
+| GET | `/payments/orders/:trackingId/status` | Get transaction status |
+| DELETE | `/payments/orders/:trackingId` | Cancel order |
+| POST | `/payments/ipn/register` | Register IPN endpoint |
+| GET | `/payments/ipn/:businessId` | Get registered IPNs |
+| POST | `/payments/ipn/callback` | Handle IPN callback |
+| GET | `/payments/business/:businessId` | Get business payments |
+
+## NPM Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run start:dev` | Start with hot reload |
+| `npm run start:debug` | Start with debugger |
+| `npm run start:prod` | Start production build |
+| `npm run build` | Build TypeScript |
+| `npm run lint` | Run ESLint with auto-fix |
+| `npm run format` | Run Prettier |
+| `npm run test` | Run unit tests |
+| `npm run test:e2e` | Run end-to-end tests |
+| `npm run test:cov` | Run tests with coverage |
+
+## Project Structure
+
+```
+src/
+├── api/                          # API Layer
+│   └── controllers/              # HTTP request handlers
+├── application/                  # Application Layer
+│   ├── dtos/                     # Data Transfer Objects
+│   │   ├── auth/                 # Auth-related DTOs
+│   │   ├── business/             # Business DTOs
+│   │   ├── pesapal/              # PesaPal integration DTOs
+│   │   └── user/                 # User DTOs
+│   └── use-cases/                # Business logic services
+│       ├── auth/                 # Authentication use cases
+│       ├── businesses/           # Business management
+│       ├── payments/             # Payment processing
+│       └── users/                # User management
+├── domain/                       # Domain Layer
+│   ├── entities/                 # Domain entities
+│   ├── enums/                    # Domain enumerations
+│   ├── repositories/             # Repository interfaces
+│   └── services/                 # Provider interfaces
+├── infrastructure/               # Infrastructure Layer
+│   ├── external/                 # External API integrations
+│   │   └── pesapal/              # PesaPal provider
+│   ├── modules/                  # NestJS module definitions
+│   ├── persistence/              # Database layer
+│   │   ├── repositories/         # Repository implementations
+│   │   └── schemas/              # Mongoose schemas
+│   └── security/                 # Auth, encryption, guards
+├── app.module.ts                 # Root module
+└── main.ts                       # Application entry point
 ```
 
-## Deployment
+## Documentation
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+- [Architecture Guide](./docs/ARCHITECTURE.md) - Detailed architecture documentation
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED - Private repository
