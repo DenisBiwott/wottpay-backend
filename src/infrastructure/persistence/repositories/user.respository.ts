@@ -65,7 +65,7 @@ export class UserRepository implements IUserRepository {
       userDoc._id.toString(),
       userDoc.email,
       userDoc.passwordHash,
-      userDoc.role as UserRole,
+      userDoc.role,
       userDoc.totpSecret,
       userDoc.isTotpEnabled,
     );

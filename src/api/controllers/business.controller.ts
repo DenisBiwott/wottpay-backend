@@ -3,18 +3,23 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
   Query,
   HttpCode,
   HttpStatus,
+  UseGuards,
 } from '@nestjs/common';
 import { BusinessService } from 'src/application/use-cases/businesses/business.service';
 import { CreateBusinessDto } from 'src/application/dtos/business/create-business.dto';
 import { UpdateBusinessDto } from 'src/application/dtos/business/update-business.dto';
+import { UpdateCredentialsDto } from 'src/application/dtos/business/update-credentials.dto';
+import { JwtAuthGuard } from 'src/infrastructure/security/jwt-auth.guard';
 
 @Controller('businesses')
+@UseGuards(JwtAuthGuard)
 export class BusinessController {
   constructor(private readonly businessService: BusinessService) {}
 
@@ -41,6 +46,14 @@ export class BusinessController {
     @Body() updateBusinessDto: UpdateBusinessDto,
   ) {
     return this.businessService.update(id, updateBusinessDto);
+  }
+
+  @Patch(':id/credentials')
+  async updateCredentials(
+    @Param('id') id: string,
+    @Body() updateCredentialsDto: UpdateCredentialsDto,
+  ) {
+    return this.businessService.updateCredentials(id, updateCredentialsDto);
   }
 
   @Delete(':id')
