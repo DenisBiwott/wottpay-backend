@@ -6,4 +6,6 @@ export interface IAuthProvider {
   verifyTOTP(token: string, secret: string): Promise<boolean>;
   generateTOTPSecret(): string;
   generateTOTPUri(secret: string, email: string, issuer: string): string;
+  generateRefreshToken(): string;
+  getRefreshTokenExpiresAt(): Date;
 }

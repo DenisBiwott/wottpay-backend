@@ -7,7 +7,12 @@ import {
   User,
   UserSchema,
 } from 'src/infrastructure/persistence/schemas/user.schema';
+import {
+  RefreshToken,
+  RefreshTokenSchema,
+} from 'src/infrastructure/persistence/schemas/refresh-token.schema';
 import { UserRepository } from 'src/infrastructure/persistence/repositories/user.respository';
+import { RefreshTokenRepository } from 'src/infrastructure/persistence/repositories/refresh-token.repository';
 import { AuthProvider } from 'src/infrastructure/security/auth.provider';
 import { JwtStrategy } from 'src/infrastructure/security/jwt.strategy';
 import { JwtAuthGuard } from 'src/infrastructure/security/jwt-auth.guard';
@@ -36,7 +41,10 @@ import { AuthController } from 'src/api/controllers/auth.controller';
       },
       inject: [ConfigService],
     }),
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: RefreshToken.name, schema: RefreshTokenSchema },
+    ]),
   ],
   controllers: [AuthController],
   providers: [
@@ -47,6 +55,10 @@ import { AuthController } from 'src/api/controllers/auth.controller';
     {
       provide: 'IUserRepository',
       useClass: UserRepository,
+    },
+    {
+      provide: 'IRefreshTokenRepository',
+      useClass: RefreshTokenRepository,
     },
     {
       provide: 'IAuthProvider',
