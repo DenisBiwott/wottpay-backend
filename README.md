@@ -165,6 +165,7 @@ src/
 ## Documentation
 
 - [Architecture Guide](./docs/ARCHITECTURE.md) - Detailed architecture documentation
+- [Authentication Guide](./docs/AUTHENTICATION.md) - Detailed authentication documentation
 
 ## License
 
