@@ -349,6 +349,10 @@ export class PaymentService {
         dto.OrderNotificationType,
       );
     } catch (error: unknown) {
+      // Always return success to PesaPal even on internal errors.
+      // PesaPal will retry IPN callbacks if it doesn't receive a success response,
+      // which could cause duplicate processing attempts. By returning success,
+      // we acknowledge receipt and handle errors internally through logging.
       const err = error as Error;
       this.logger.error(`IPN callback error: ${err.message}`, err.stack);
       return IpnCallbackResponseDto.success(
@@ -383,6 +387,17 @@ export class PaymentService {
     return PaymentOrderResponseDto.fromEntity(payment);
   }
 
+  /**
+   * Maps PesaPal transaction status codes to internal PaymentStatus.
+   *
+   * Status mapping rationale:
+   * - COMPLETED -> COMPLETED: Direct mapping for successful payments
+   * - FAILED -> FAILED: Direct mapping for failed payments
+   * - REVERSED -> RECALLED: PesaPal reversals are treated as recalled/cancelled
+   * - PENDING/unknown -> ACTIVE: Pending transactions remain active for tracking
+   *
+   * Using ACTIVE as default ensures new/unknown statuses don't break the system.
+   */
   private mapPesapalStatusToPaymentStatus(
     statusCode: PesapalTransactionStatus,
   ): PaymentStatus {
