@@ -16,20 +16,20 @@ WottPay follows Clean Architecture (also known as Hexagonal/Ports and Adapters) 
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              API Layer                                       │
-│                         src/api/controllers/                                 │
+│                              API Layer                                      │
+│                         src/api/controllers/                                │
 │                                                                             │
 │   Handles HTTP requests, authentication, request validation                 │
 │   Depends on: Application Layer                                             │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                          Application Layer                                   │
+│                         Application Layer                                   │
 │                    src/application/use-cases/                               │
 │                        src/application/dtos/                                │
 │                                                                             │
 │   Orchestrates business operations, transforms data                         │
 │   Depends on: Domain Layer                                                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                            Domain Layer                                      │
+│                           Domain Layer                                      │
 │                        src/domain/entities/                                 │
 │                      src/domain/repositories/                               │
 │                        src/domain/services/                                 │
@@ -38,7 +38,7 @@ WottPay follows Clean Architecture (also known as Hexagonal/Ports and Adapters) 
 │   Pure business logic, no external dependencies                             │
 │   Depends on: Nothing                                                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                        Infrastructure Layer                                  │
+│                       Infrastructure Layer                                  │
 │               src/infrastructure/persistence/                               │
 │                 src/infrastructure/external/                                │
 │                 src/infrastructure/security/                                │
@@ -72,14 +72,15 @@ Infrastructure Layer ────► Implements Domain Interfaces
 
 The core of the application containing pure business logic.
 
-| Directory | Purpose |
-|-----------|---------|
-| `entities/` | Business objects (User, Business, PaymentLink, etc.) |
-| `repositories/` | Interfaces defining data access contracts |
-| `services/` | Interfaces for external service integrations |
-| `enums/` | Domain-specific enumerations |
+| Directory       | Purpose                                              |
+| --------------- | ---------------------------------------------------- |
+| `entities/`     | Business objects (User, Business, PaymentLink, etc.) |
+| `repositories/` | Interfaces defining data access contracts            |
+| `services/`     | Interfaces for external service integrations         |
+| `enums/`        | Domain-specific enumerations                         |
 
 **Example Entity:**
+
 ```typescript
 // src/domain/entities/payment-link.entity.ts
 export class PaymentLink {
@@ -93,6 +94,7 @@ export class PaymentLink {
 ```
 
 **Example Repository Interface:**
+
 ```typescript
 // src/domain/repositories/payment-link.repo.ts
 export interface IPaymentLinkRepository {
@@ -106,12 +108,13 @@ export interface IPaymentLinkRepository {
 
 Orchestrates use cases and handles data transformation.
 
-| Directory | Purpose |
-|-----------|---------|
-| `use-cases/` | Service classes implementing business operations |
-| `dtos/` | Request/response data structures for API communication |
+| Directory    | Purpose                                                |
+| ------------ | ------------------------------------------------------ |
+| `use-cases/` | Service classes implementing business operations       |
+| `dtos/`      | Request/response data structures for API communication |
 
 **Example Use Case:**
+
 ```typescript
 // src/application/use-cases/payments/payment.service.ts
 @Injectable()
@@ -123,7 +126,9 @@ export class PaymentService {
     private readonly pesapalProvider: IPesapalProvider,
   ) {}
 
-  async createPaymentOrder(dto: CreatePaymentOrderDto): Promise<PaymentOrderResponseDto> {
+  async createPaymentOrder(
+    dto: CreatePaymentOrderDto,
+  ): Promise<PaymentOrderResponseDto> {
     // Orchestrate the payment creation flow
   }
 }
@@ -133,19 +138,22 @@ export class PaymentService {
 
 Provides concrete implementations of domain interfaces.
 
-| Directory | Purpose |
-|-----------|---------|
+| Directory      | Purpose                                         |
+| -------------- | ----------------------------------------------- |
 | `persistence/` | Database schemas and repository implementations |
-| `external/` | Third-party API integrations (PesaPal) |
-| `security/` | Authentication, encryption, guards |
-| `modules/` | NestJS module configuration |
+| `external/`    | Third-party API integrations (PesaPal)          |
+| `security/`    | Authentication, encryption, guards              |
+| `modules/`     | NestJS module configuration                     |
 
 **Example Repository Implementation:**
+
 ```typescript
 // src/infrastructure/persistence/repositories/payment-link.repository.ts
 @Injectable()
 export class PaymentLinkRepository implements IPaymentLinkRepository {
-  constructor(@InjectModel('PaymentLink') private model: Model<PaymentLinkDocument>) {}
+  constructor(
+    @InjectModel('PaymentLink') private model: Model<PaymentLinkDocument>,
+  ) {}
 
   async save(paymentLink: PaymentLink): Promise<PaymentLink> {
     const doc = new this.model(paymentLink);
@@ -159,11 +167,12 @@ export class PaymentLinkRepository implements IPaymentLinkRepository {
 
 Handles HTTP concerns and delegates to application services.
 
-| Directory | Purpose |
-|-----------|---------|
+| Directory      | Purpose                                  |
+| -------------- | ---------------------------------------- |
 | `controllers/` | Route handlers, request/response mapping |
 
 **Example Controller:**
+
 ```typescript
 // src/api/controllers/payment.controller.ts
 @Controller('payments')
@@ -329,11 +338,11 @@ Plain Credentials ──► EncryptionService.encrypt() ──► Database
 
 ## Key Files Reference
 
-| File | Purpose |
-|------|---------|
-| `src/main.ts` | Application bootstrap |
-| `src/app.module.ts` | Root module configuration |
-| `src/infrastructure/modules/*.ts` | Feature module configurations |
-| `src/infrastructure/security/jwt.strategy.ts` | JWT validation strategy |
-| `src/infrastructure/security/encryption.service.ts` | Credential encryption |
-| `src/infrastructure/external/pesapal/pesapal.provider.ts` | PesaPal API client |
+| File                                                      | Purpose                       |
+| --------------------------------------------------------- | ----------------------------- |
+| `src/main.ts`                                             | Application bootstrap         |
+| `src/app.module.ts`                                       | Root module configuration     |
+| `src/infrastructure/modules/*.ts`                         | Feature module configurations |
+| `src/infrastructure/security/jwt.strategy.ts`             | JWT validation strategy       |
+| `src/infrastructure/security/encryption.service.ts`       | Credential encryption         |
+| `src/infrastructure/external/pesapal/pesapal.provider.ts` | PesaPal API client            |
