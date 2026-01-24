@@ -8,7 +8,9 @@ import type { IBusinessRepository } from 'src/domain/repositories/business.repo'
 import { Business } from 'src/domain/entities/business.entity';
 import { CreateBusinessDto } from 'src/application/dtos/business/create-business.dto';
 import { UpdateBusinessDto } from 'src/application/dtos/business/update-business.dto';
+import { UpdateCredentialsDto } from 'src/application/dtos/business/update-credentials.dto';
 import { BusinessResponseDto } from 'src/application/dtos/business/business-response.dto';
+import { EncryptionService } from 'src/infrastructure/security/encryption.service';
 
 interface BusinessUpdateData {
   name?: string;
@@ -16,11 +18,17 @@ interface BusinessUpdateData {
   pesapalConsumerSecret?: string;
 }
 
+export interface DecryptedCredentials {
+  pesapalConsumerKey: string;
+  pesapalConsumerSecret: string;
+}
+
 @Injectable()
 export class BusinessService {
   constructor(
     @Inject('IBusinessRepository')
     private readonly businessRepository: IBusinessRepository,
+    private readonly encryptionService: EncryptionService,
   ) {}
 
   async create(dto: CreateBusinessDto): Promise<BusinessResponseDto> {
@@ -29,11 +37,16 @@ export class BusinessService {
       throw new ConflictException('Business with this name already exists');
     }
 
-    const business = new Business(
-      undefined as any,
-      dto.name,
-      dto.pesapalConsumerKey,
+    const encryptedKey = this.encryptionService.encrypt(dto.pesapalConsumerKey);
+    const encryptedSecret = this.encryptionService.encrypt(
       dto.pesapalConsumerSecret,
+    );
+
+    const business = new Business(
+      undefined as unknown as string,
+      dto.name,
+      encryptedKey,
+      encryptedSecret,
     );
 
     const createdBusiness = await this.businessRepository.create(business);
@@ -93,14 +106,59 @@ export class BusinessService {
 
     const updateData: BusinessUpdateData = {};
     if (dto.name) updateData.name = dto.name;
-    if (dto.pesapalConsumerKey)
-      updateData.pesapalConsumerKey = dto.pesapalConsumerKey;
-    if (dto.pesapalConsumerSecret)
-      updateData.pesapalConsumerSecret = dto.pesapalConsumerSecret;
+    if (dto.pesapalConsumerKey) {
+      updateData.pesapalConsumerKey = this.encryptionService.encrypt(
+        dto.pesapalConsumerKey,
+      );
+    }
+    if (dto.pesapalConsumerSecret) {
+      updateData.pesapalConsumerSecret = this.encryptionService.encrypt(
+        dto.pesapalConsumerSecret,
+      );
+    }
 
     await this.businessRepository.update(id, updateData);
     const updatedBusiness = await this.businessRepository.findById(id);
     return BusinessResponseDto.fromEntity(updatedBusiness!);
+  }
+
+  async updateCredentials(
+    id: string,
+    dto: UpdateCredentialsDto,
+  ): Promise<BusinessResponseDto> {
+    const business = await this.businessRepository.findById(id);
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    const encryptedKey = this.encryptionService.encrypt(dto.pesapalConsumerKey);
+    const encryptedSecret = this.encryptionService.encrypt(
+      dto.pesapalConsumerSecret,
+    );
+
+    await this.businessRepository.update(id, {
+      pesapalConsumerKey: encryptedKey,
+      pesapalConsumerSecret: encryptedSecret,
+    });
+
+    const updatedBusiness = await this.businessRepository.findById(id);
+    return BusinessResponseDto.fromEntity(updatedBusiness!);
+  }
+
+  async getDecryptedCredentials(id: string): Promise<DecryptedCredentials> {
+    const business = await this.businessRepository.findById(id);
+    if (!business) {
+      throw new NotFoundException('Business not found');
+    }
+
+    return {
+      pesapalConsumerKey: this.encryptionService.decrypt(
+        business.pesapalConsumerKey,
+      ),
+      pesapalConsumerSecret: this.encryptionService.decrypt(
+        business.pesapalConsumerSecret,
+      ),
+    };
   }
 
   async delete(id: string): Promise<void> {

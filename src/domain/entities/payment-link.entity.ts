@@ -11,5 +11,14 @@ export class PaymentLink {
     public status: PaymentStatus,
     public createdAt: Date,
     public updatedAt: Date,
+    public redirectUrl?: string,
+    public description?: string,
+    public callbackUrl?: string,
+    public notificationId?: string,
+    public customerEmail?: string,
+    public customerPhone?: string,
+    public customerFirstName?: string,
+    public customerLastName?: string,
+    public accountNumber?: string,
   ) {}
 }

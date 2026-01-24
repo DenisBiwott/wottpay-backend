@@ -21,9 +21,12 @@ import { AuthController } from 'src/api/controllers/auth.controller';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (configService: ConfigService) => {
-        const secret = configService.get<string>('JWT_SECRET') || 'default-secret';
+        const secret =
+          configService.get<string>('JWT_SECRET') || 'default-secret';
         const expiresInRaw = configService.get<string>('JWT_EXPIRES_IN');
-        const expiresIn = expiresInRaw ? parseInt(expiresInRaw.trim(), 10) : 3600;
+        const expiresIn = expiresInRaw
+          ? parseInt(expiresInRaw.trim(), 10)
+          : 3600;
         return {
           secret,
           signOptions: {

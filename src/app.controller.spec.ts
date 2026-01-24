@@ -15,8 +15,10 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('should return "Fear enlists the body; Purpose enlists the heart."', () => {
+      expect(appController.getHello()).toBe(
+        'Fear enlists the body; Purpose enlists the heart.',
+      );
     });
   });
 });
