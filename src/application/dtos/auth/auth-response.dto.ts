@@ -8,6 +8,8 @@ export class AuthResponseDto {
     id: string;
     email: string;
     role: UserRole;
+    businessId: string;
+    business: { id: string; name: string };
   };
 }
 

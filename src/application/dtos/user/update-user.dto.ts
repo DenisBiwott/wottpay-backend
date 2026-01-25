@@ -5,6 +5,7 @@ import {
   IsEnum,
   IsOptional,
   IsBoolean,
+  IsNotEmpty,
 } from 'class-validator';
 import { UserRole } from 'src/domain/enums/user-role.enum';
 
@@ -21,6 +22,11 @@ export class UpdateUserDto {
   @IsOptional()
   @IsEnum(UserRole)
   role?: UserRole;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  businessId?: string;
 
   @IsOptional()
   @IsBoolean()

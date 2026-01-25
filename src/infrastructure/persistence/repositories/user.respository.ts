@@ -4,7 +4,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User as UserDocument } from 'src/infrastructure/persistence/schemas/user.schema';
 import { User } from 'src/domain/entities/user.entity';
-import { UserRole } from 'src/domain/enums/user-role.enum';
 import { IUserRepository } from 'src/domain/repositories/user.repo';
 
 @Injectable()
@@ -51,6 +50,21 @@ export class UserRepository implements IUserRepository {
     return userDocs.map((doc) => this.toDomainEntity(doc));
   }
 
+  async findAllByBusiness(
+    businessId: string,
+    options?: { skip?: number; limit?: number },
+  ): Promise<User[]> {
+    const query = this.userModel.find({ businessId });
+    if (options?.skip) {
+      query.skip(options.skip);
+    }
+    if (options?.limit) {
+      query.limit(options.limit);
+    }
+    const userDocs = await query.exec();
+    return userDocs.map((doc) => this.toDomainEntity(doc));
+  }
+
   async delete(id: string): Promise<boolean> {
     const result = await this.userModel.findByIdAndDelete(id).exec();
     return result !== null;
@@ -60,12 +74,17 @@ export class UserRepository implements IUserRepository {
     return this.userModel.countDocuments().exec();
   }
 
+  async countByBusiness(businessId: string): Promise<number> {
+    return this.userModel.countDocuments({ businessId }).exec();
+  }
+
   private toDomainEntity(userDoc: UserDocument): User {
     return new User(
       userDoc._id.toString(),
       userDoc.email,
       userDoc.passwordHash,
       userDoc.role,
+      userDoc.businessId,
       userDoc.totpSecret,
       userDoc.isTotpEnabled,
     );

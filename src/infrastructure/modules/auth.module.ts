@@ -11,8 +11,13 @@ import {
   RefreshToken,
   RefreshTokenSchema,
 } from 'src/infrastructure/persistence/schemas/refresh-token.schema';
+import {
+  Business,
+  BusinessSchema,
+} from 'src/infrastructure/persistence/schemas/businesses.schema';
 import { UserRepository } from 'src/infrastructure/persistence/repositories/user.respository';
 import { RefreshTokenRepository } from 'src/infrastructure/persistence/repositories/refresh-token.repository';
+import { BusinessRepository } from 'src/infrastructure/persistence/repositories/business.repository';
 import { AuthProvider } from 'src/infrastructure/security/auth.provider';
 import { JwtStrategy } from 'src/infrastructure/security/jwt.strategy';
 import { JwtAuthGuard } from 'src/infrastructure/security/jwt-auth.guard';
@@ -44,6 +49,7 @@ import { AuthController } from 'src/api/controllers/auth.controller';
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: RefreshToken.name, schema: RefreshTokenSchema },
+      { name: Business.name, schema: BusinessSchema },
     ]),
   ],
   controllers: [AuthController],
@@ -59,6 +65,10 @@ import { AuthController } from 'src/api/controllers/auth.controller';
     {
       provide: 'IRefreshTokenRepository',
       useClass: RefreshTokenRepository,
+    },
+    {
+      provide: 'IBusinessRepository',
+      useClass: BusinessRepository,
     },
     {
       provide: 'IAuthProvider',

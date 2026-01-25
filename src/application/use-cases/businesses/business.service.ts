@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { IBusinessRepository } from 'src/domain/repositories/business.repo';
+import type { IUserRepository } from 'src/domain/repositories/user.repo';
 import { Business } from 'src/domain/entities/business.entity';
 import { CreateBusinessDto } from 'src/application/dtos/business/create-business.dto';
 import { UpdateBusinessDto } from 'src/application/dtos/business/update-business.dto';
@@ -28,6 +29,8 @@ export class BusinessService {
   constructor(
     @Inject('IBusinessRepository')
     private readonly businessRepository: IBusinessRepository,
+    @Inject('IUserRepository')
+    private readonly userRepository: IUserRepository,
     private readonly encryptionService: EncryptionService,
   ) {}
 
@@ -166,6 +169,15 @@ export class BusinessService {
     if (!business) {
       throw new NotFoundException('Business not found');
     }
+
+    // Check for associated users
+    const userCount = await this.userRepository.countByBusiness(id);
+    if (userCount > 0) {
+      throw new ConflictException(
+        'Cannot delete business with associated users',
+      );
+    }
+
     await this.businessRepository.delete(id);
   }
 }
