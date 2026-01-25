@@ -100,7 +100,9 @@ export class PaymentService {
     }
 
     const token = await this.getAccessToken(dto.businessId);
-    const merchantRef = dto.merchantRef || uuidv4();
+
+    const merchantRef =
+      dto.merchantRef ?? uuidv4().replace(/-/g, '').slice(0, 10).toUpperCase();
 
     const billingAddress: PesapalBillingAddress = dto.billingAddress
       ? {

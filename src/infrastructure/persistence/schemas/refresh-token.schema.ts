@@ -21,6 +21,5 @@ export class RefreshToken extends Document {
 export const RefreshTokenSchema = SchemaFactory.createForClass(RefreshToken);
 
 // Index for efficient lookups and cleanup
-RefreshTokenSchema.index({ token: 1 });
 RefreshTokenSchema.index({ userId: 1 });
 RefreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
