@@ -3,9 +3,11 @@ import {
   Inject,
   ConflictException,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import type { IUserRepository } from 'src/domain/repositories/user.repo';
+import type { IBusinessRepository } from 'src/domain/repositories/business.repo';
 import { User } from 'src/domain/entities/user.entity';
 import { UserRole } from 'src/domain/enums/user-role.enum';
 import { CreateUserDto } from 'src/application/dtos/user/create-user.dto';
@@ -16,6 +18,7 @@ interface UserUpdateData {
   email?: string;
   passwordHash?: string;
   role?: UserRole;
+  businessId?: string;
   isTotpEnabled?: boolean;
 }
 
@@ -24,6 +27,8 @@ export class UserService {
   constructor(
     @Inject('IUserRepository')
     private readonly userRepository: IUserRepository,
+    @Inject('IBusinessRepository')
+    private readonly businessRepository: IBusinessRepository,
   ) {}
 
   async create(dto: CreateUserDto): Promise<UserResponseDto> {
@@ -32,18 +37,24 @@ export class UserService {
       throw new ConflictException('User with this email already exists');
     }
 
+    const business = await this.businessRepository.findById(dto.businessId);
+    if (!business) {
+      throw new BadRequestException('Business not found');
+    }
+
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const user = new User(
       undefined as any,
       dto.email,
       passwordHash,
       dto.role,
+      dto.businessId,
       undefined,
       false,
     );
 
     const createdUser = await this.userRepository.create(user);
-    return UserResponseDto.fromEntity(createdUser);
+    return UserResponseDto.fromEntity(createdUser, business);
   }
 
   async findById(id: string): Promise<UserResponseDto> {
@@ -51,7 +62,8 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-    return UserResponseDto.fromEntity(user);
+    const business = await this.businessRepository.findById(user.businessId);
+    return UserResponseDto.fromEntity(user, business ?? undefined);
   }
 
   async findAll(
@@ -69,8 +81,19 @@ export class UserService {
       this.userRepository.count(),
     ]);
 
+    // Fetch businesses for all users
+    const businessIds = [...new Set(users.map((user) => user.businessId))];
+    const businesses = await Promise.all(
+      businessIds.map((id) => this.businessRepository.findById(id)),
+    );
+    const businessMap = new Map(
+      businesses.filter((b) => b !== null).map((b) => [b.id, b]),
+    );
+
     return {
-      data: users.map((user) => UserResponseDto.fromEntity(user)),
+      data: users.map((user) =>
+        UserResponseDto.fromEntity(user, businessMap.get(user.businessId)),
+      ),
       total,
       page,
       limit,
@@ -90,17 +113,28 @@ export class UserService {
       }
     }
 
+    if (dto.businessId) {
+      const business = await this.businessRepository.findById(dto.businessId);
+      if (!business) {
+        throw new BadRequestException('Business not found');
+      }
+    }
+
     const updateData: UserUpdateData = {};
     if (dto.email) updateData.email = dto.email;
     if (dto.password)
       updateData.passwordHash = await bcrypt.hash(dto.password, 10);
     if (dto.role) updateData.role = dto.role;
+    if (dto.businessId) updateData.businessId = dto.businessId;
     if (dto.isTotpEnabled !== undefined)
       updateData.isTotpEnabled = dto.isTotpEnabled;
 
     await this.userRepository.update(id, updateData);
     const updatedUser = await this.userRepository.findById(id);
-    return UserResponseDto.fromEntity(updatedUser!);
+    const business = await this.businessRepository.findById(
+      updatedUser!.businessId,
+    );
+    return UserResponseDto.fromEntity(updatedUser!, business ?? undefined);
   }
 
   async delete(id: string): Promise<void> {

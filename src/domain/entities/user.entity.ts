@@ -6,6 +6,7 @@ export class User {
     public readonly email: string,
     public passwordHash: string,
     public role: UserRole,
+    public readonly businessId: string,
     public totpSecret?: string,
     public isTotpEnabled: boolean = false,
   ) {}

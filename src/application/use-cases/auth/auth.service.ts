@@ -7,6 +7,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import type { IUserRepository } from 'src/domain/repositories/user.repo';
 import type { IRefreshTokenRepository } from 'src/domain/repositories/refresh-token.repo';
+import type { IBusinessRepository } from 'src/domain/repositories/business.repo';
 import type { IAuthProvider } from 'src/domain/services/iauth.provider';
 import { RefreshToken } from 'src/domain/entities/refresh-token.entity';
 import { LoginDto } from 'src/application/dtos/auth/login.dto';
@@ -27,6 +28,8 @@ export class AuthService {
     private readonly userRepository: IUserRepository,
     @Inject('IRefreshTokenRepository')
     private readonly refreshTokenRepository: IRefreshTokenRepository,
+    @Inject('IBusinessRepository')
+    private readonly businessRepository: IBusinessRepository,
     @Inject('IAuthProvider')
     private readonly authProvider: IAuthProvider,
   ) {}
@@ -51,12 +54,19 @@ export class AuthService {
       throw new UnauthorizedException('Account is not properly configured');
     }
 
+    // Fetch the user's business
+    const business = await this.businessRepository.findById(user.businessId);
+    if (!business) {
+      throw new UnauthorizedException('User business not found');
+    }
+
     const requiresTotp = user.isTotpEnabled && !!user.totpSecret;
 
     const payload = {
       sub: user.id,
       email: user.email,
       role: user.role,
+      businessId: user.businessId,
       totpVerified: !requiresTotp,
     };
 
@@ -73,6 +83,8 @@ export class AuthService {
         id: user.id,
         email: user.email,
         role: user.role,
+        businessId: user.businessId,
+        business: { id: business.id, name: business.name },
       },
     };
   }
@@ -102,6 +114,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      businessId: user.businessId,
       totpVerified: true,
     };
 
@@ -207,10 +220,14 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
+    const business = await this.businessRepository.findById(user.businessId);
+
     return {
       id: user.id,
       email: user.email,
       role: user.role,
+      businessId: user.businessId,
+      business: business ? { id: business.id, name: business.name } : null,
       isTotpEnabled: user.isTotpEnabled,
     };
   }
@@ -241,6 +258,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      businessId: user.businessId,
       totpVerified: true, // User was already verified
     };
     const accessToken = this.authProvider.generateJWT(payload);

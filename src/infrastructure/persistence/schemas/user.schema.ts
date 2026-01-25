@@ -13,6 +13,9 @@ export class User extends Document {
   @Prop({ required: true, enum: UserRole })
   role: UserRole;
 
+  @Prop({ required: true, index: true })
+  businessId: string;
+
   @Prop()
   totpSecret?: string;
 

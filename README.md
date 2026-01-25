@@ -86,19 +86,24 @@ npm run start:prod
 
 ### Users
 
+Every user must be associated with a business. The `businessId` field is required when creating a user and links the user to their organization.
+
 | Method | Endpoint     | Description    |
 | ------ | ------------ | -------------- |
-| POST   | `/users`     | Create user    |
-| GET    | `/users/:id` | Get user by ID |
-| PUT    | `/users/:id` | Update user    |
+| POST   | `/users`     | Create user (requires `businessId`)   |
+| GET    | `/users/:id` | Get user by ID (includes business info) |
+| PUT    | `/users/:id` | Update user (can reassign `businessId`) |
 
 ### Businesses
+
+Businesses are organizations that can have multiple users associated with them. A business cannot be deleted if it has associated users.
 
 | Method | Endpoint                      | Description                |
 | ------ | ----------------------------- | -------------------------- |
 | POST   | `/businesses`                 | Create business            |
 | GET    | `/businesses/:id`             | Get business               |
 | PUT    | `/businesses/:id`             | Update business            |
+| DELETE | `/businesses/:id`             | Delete business (fails if users exist) |
 | PATCH  | `/businesses/:id/credentials` | Update PesaPal credentials |
 
 ### Payments
