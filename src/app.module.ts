@@ -7,6 +7,8 @@ import { UserModule } from './infrastructure/modules/user.module';
 import { BusinessModule } from './infrastructure/modules/business.module';
 import { AuthModule } from './infrastructure/modules/auth.module';
 import { PaymentModule } from './infrastructure/modules/payment.module';
+import { InsightsModule } from './infrastructure/modules/insights.module';
+import { EventLogModule } from './infrastructure/modules/event-log.module';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { PaymentModule } from './infrastructure/modules/payment.module';
     UserModule,
     BusinessModule,
     PaymentModule,
+    InsightsModule,
+    EventLogModule,
   ],
   controllers: [AppController],
   providers: [AppService],

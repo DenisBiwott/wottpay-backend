@@ -7,3 +7,4 @@ export * from './payment-order-response.dto';
 export * from './transaction-status-response.dto';
 export * from './ipn-registration-response.dto';
 export * from './ipn-callback-response.dto';
+export * from './payment-link-with-transaction.dto';

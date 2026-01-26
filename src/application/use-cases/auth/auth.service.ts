@@ -20,6 +20,8 @@ import {
   TotpSetupResponseDto,
   TotpVerifyResponseDto,
 } from 'src/application/dtos/auth/auth-response.dto';
+import { EventLogService } from '../event-logs/event-log.service';
+import { EventAction } from 'src/domain/enums/event-action.enum';
 
 @Injectable()
 export class AuthService {
@@ -32,6 +34,7 @@ export class AuthService {
     private readonly businessRepository: IBusinessRepository,
     @Inject('IAuthProvider')
     private readonly authProvider: IAuthProvider,
+    private readonly eventLogService: EventLogService,
   ) {}
 
   async login(dto: LoginDto): Promise<AuthResponseDto> {
@@ -74,6 +77,16 @@ export class AuthService {
 
     // Generate and store refresh token
     const refreshToken = await this.createRefreshToken(user.id);
+
+    // Log the login event
+    await this.eventLogService.logEvent(
+      EventAction.USER_LOGIN,
+      user.id,
+      user.businessId,
+      'User',
+      user.id,
+      { email: user.email, requiresTotp },
+    );
 
     return {
       accessToken,
@@ -182,6 +195,16 @@ export class AuthService {
 
     await this.userRepository.update(user.id, { isTotpEnabled: true } as any);
 
+    // Log TOTP enabled event
+    await this.eventLogService.logEvent(
+      EventAction.TOTP_ENABLED,
+      user.id,
+      user.businessId,
+      'User',
+      user.id,
+      { email: user.email },
+    );
+
     return { message: 'TOTP enabled successfully' };
   }
 
@@ -210,6 +233,16 @@ export class AuthService {
       isTotpEnabled: false,
       totpSecret: undefined,
     } as any);
+
+    // Log TOTP disabled event
+    await this.eventLogService.logEvent(
+      EventAction.TOTP_DISABLED,
+      user.id,
+      user.businessId,
+      'User',
+      user.id,
+      { email: user.email },
+    );
 
     return { message: 'TOTP disabled successfully' };
   }
@@ -273,7 +306,21 @@ export class AuthService {
   }
 
   async logout(userId: string): Promise<{ message: string }> {
+    const user = await this.userRepository.findById(userId);
     await this.refreshTokenRepository.revokeAllForUser(userId);
+
+    // Log logout event
+    if (user) {
+      await this.eventLogService.logEvent(
+        EventAction.USER_LOGOUT,
+        userId,
+        user.businessId,
+        'User',
+        userId,
+        { email: user.email },
+      );
+    }
+
     return { message: 'Logged out successfully' };
   }
 

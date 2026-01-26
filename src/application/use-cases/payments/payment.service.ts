@@ -3,6 +3,7 @@ import {
   Inject,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,6 +12,7 @@ import { IpnRegistration } from 'src/domain/entities/ipn-registration.entity';
 import { PaymentStatus } from 'src/domain/enums/payment-status.enum';
 import { IpnNotificationType } from 'src/domain/enums/ipn-notification-type.enum';
 import { PesapalTransactionStatus } from 'src/domain/enums/pesapal-transaction-status.enum';
+import { UserRole } from 'src/domain/enums/user-role.enum';
 import type { IBusinessRepository } from 'src/domain/repositories/business.repo';
 import type { IPaymentLinkRepository } from 'src/domain/repositories/payment-link.repo';
 import type { IIpnRegistrationRepository } from 'src/domain/repositories/ipn-registration.repo';
@@ -33,6 +35,11 @@ import {
 } from 'src/application/dtos/pesapal';
 import { PaymentTransaction } from 'src/domain/entities/payment-transaction.entity';
 import { EncryptionService } from 'src/infrastructure/security/encryption.service';
+import { TransactionFilters } from 'src/domain/interfaces/transaction-filters.interface';
+import { PaymentLinkFilters } from 'src/domain/interfaces/payment-link-filters.interface';
+import { PaymentLinkWithTransactionDto } from 'src/application/dtos/pesapal/payment-link-with-transaction.dto';
+import { EventLogService } from '../event-logs/event-log.service';
+import { EventAction } from 'src/domain/enums/event-action.enum';
 
 @Injectable()
 export class PaymentService {
@@ -51,6 +58,7 @@ export class PaymentService {
     private readonly pesapalProvider: IPesapalProvider,
     private readonly tokenCacheService: TokenCacheService,
     private readonly encryptionService: EncryptionService,
+    private readonly eventLogService: EventLogService,
   ) {}
 
   private async getAccessToken(businessId: string): Promise<string> {
@@ -93,6 +101,7 @@ export class PaymentService {
 
   async createPaymentOrder(
     dto: CreatePaymentOrderDto,
+    userId: string,
   ): Promise<PaymentOrderResponseDto> {
     const business = await this.businessRepo.findById(dto.businessId);
     if (!business) {
@@ -156,6 +165,7 @@ export class PaymentService {
       merchantRef,
       pesapalResponse.order_tracking_id,
       dto.businessId,
+      userId,
       dto.amount,
       dto.currency,
       PaymentStatus.ACTIVE,
@@ -173,6 +183,22 @@ export class PaymentService {
     );
 
     const savedPaymentLink = await this.paymentLinkRepo.save(paymentLink);
+
+    // Log payment link created event
+    await this.eventLogService.logEvent(
+      EventAction.PAYMENT_LINK_CREATED,
+      userId,
+      dto.businessId,
+      'PaymentLink',
+      savedPaymentLink.id,
+      {
+        amount: dto.amount,
+        currency: dto.currency,
+        trackingId: savedPaymentLink.trackingId,
+        merchantRef: savedPaymentLink.merchantRef,
+      },
+    );
+
     return PaymentOrderResponseDto.fromEntity(savedPaymentLink);
   }
 
@@ -229,6 +255,19 @@ export class PaymentService {
         dto.orderTrackingId,
         PaymentStatus.RECALLED,
       );
+
+      // Log payment cancelled event
+      await this.eventLogService.logEvent(
+        EventAction.PAYMENT_CANCELLED,
+        paymentLink.userId,
+        paymentLink.businessId,
+        'PaymentLink',
+        paymentLink.id,
+        {
+          trackingId: dto.orderTrackingId,
+          merchantRef: paymentLink.merchantRef,
+        },
+      );
     }
 
     return {
@@ -269,6 +308,21 @@ export class PaymentService {
 
     const savedRegistration =
       await this.ipnRegistrationRepo.save(ipnRegistration);
+
+    // Log IPN registered event (using a system user ID since this is admin action)
+    await this.eventLogService.logEvent(
+      EventAction.IPN_REGISTERED,
+      'system',
+      dto.businessId,
+      'IpnRegistration',
+      savedRegistration.id,
+      {
+        url: dto.url,
+        notificationType: dto.notificationType,
+        ipnId: savedRegistration.ipnId,
+      },
+    );
+
     return IpnRegistrationResponseDto.fromEntity(savedRegistration);
   }
 
@@ -326,6 +380,8 @@ export class PaymentService {
         const transaction = new PaymentTransaction(
           undefined as any,
           paymentLink.id,
+          paymentLink.userId,
+          paymentLink.businessId,
           dto.OrderTrackingId,
           dto.OrderMerchantReference,
           statusResponse.payment_method,
@@ -338,7 +394,35 @@ export class PaymentService {
           new Date(),
           new Date(),
         );
-        await this.paymentTransactionRepo.save(transaction);
+        const savedTransaction =
+          await this.paymentTransactionRepo.save(transaction);
+
+        // Log payment event based on status
+        const statusCode =
+          statusResponse.status_code as PesapalTransactionStatus;
+        const eventAction =
+          statusCode === PesapalTransactionStatus.COMPLETED
+            ? EventAction.PAYMENT_COMPLETED
+            : statusCode === PesapalTransactionStatus.FAILED
+              ? EventAction.PAYMENT_FAILED
+              : null;
+
+        if (eventAction) {
+          await this.eventLogService.logEvent(
+            eventAction,
+            paymentLink.userId,
+            paymentLink.businessId,
+            'PaymentTransaction',
+            savedTransaction.id,
+            {
+              amount: statusResponse.amount,
+              currency: statusResponse.currency,
+              trackingId: dto.OrderTrackingId,
+              confirmationCode: statusResponse.confirmation_code,
+              paymentMethod: statusResponse.payment_method,
+            },
+          );
+        }
 
         this.logger.log(
           `Payment status updated: ${dto.OrderTrackingId} -> ${newStatus}`,
@@ -387,6 +471,68 @@ export class PaymentService {
       throw new NotFoundException('Payment not found');
     }
     return PaymentOrderResponseDto.fromEntity(payment);
+  }
+
+  async getTransactions(
+    userId: string,
+    businessId: string,
+    role: UserRole,
+    filters?: TransactionFilters,
+  ): Promise<PaymentTransaction[]> {
+    if (role === UserRole.ADMIN) {
+      return this.paymentTransactionRepo.findByBusinessId(businessId, filters);
+    }
+    return this.paymentTransactionRepo.findByUserIdAndBusinessId(
+      userId,
+      businessId,
+      filters,
+    );
+  }
+
+  async getPaymentLinks(
+    userId: string,
+    businessId: string,
+    role: UserRole,
+    filters?: PaymentLinkFilters,
+  ): Promise<PaymentLink[]> {
+    if (role === UserRole.ADMIN) {
+      return this.paymentLinkRepo.findAllByBusinessWithFilters(
+        businessId,
+        filters,
+      );
+    }
+    return this.paymentLinkRepo.findByUserIdAndBusinessId(
+      userId,
+      businessId,
+      filters,
+    );
+  }
+
+  async getPaymentLinkWithTransaction(
+    paymentLinkId: string,
+    userId: string,
+    businessId: string,
+    role: UserRole,
+  ): Promise<PaymentLinkWithTransactionDto> {
+    const paymentLink = await this.paymentLinkRepo.findById(paymentLinkId);
+
+    if (!paymentLink) {
+      throw new NotFoundException('Payment link not found');
+    }
+
+    if (paymentLink.businessId !== businessId) {
+      throw new ForbiddenException('Access denied to this payment link');
+    }
+
+    if (role !== UserRole.ADMIN && paymentLink.userId !== userId) {
+      throw new ForbiddenException('Access denied to this payment link');
+    }
+
+    const transactions =
+      await this.paymentTransactionRepo.findByPaymentLinkId(paymentLinkId);
+    const transaction = transactions.length > 0 ? transactions[0] : null;
+
+    return PaymentLinkWithTransactionDto.fromEntities(paymentLink, transaction);
   }
 
   /**

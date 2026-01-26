@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { HttpModule } from '@nestjs/axios';
 import {
@@ -26,9 +26,11 @@ import { PaymentService } from 'src/application/use-cases/payments/payment.servi
 import { TokenCacheService } from 'src/application/use-cases/payments/token-cache.service';
 import { PaymentController } from 'src/api/controllers/payment.controller';
 import { EncryptionService } from 'src/infrastructure/security/encryption.service';
+import { EventLogModule } from './event-log.module';
 
 @Module({
   imports: [
+    forwardRef(() => EventLogModule),
     HttpModule,
     MongooseModule.forFeature([
       { name: PaymentLink.name, schema: PaymentLinkSchema },

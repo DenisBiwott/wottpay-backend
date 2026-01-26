@@ -13,6 +13,7 @@ import { SetupTotpDto } from 'src/application/dtos/auth/setup-totp.dto';
 import { RefreshTokenDto } from 'src/application/dtos/auth/refresh-token.dto';
 import { JwtAuthGuard } from 'src/infrastructure/security/jwt-auth.guard';
 import { Public } from 'src/infrastructure/security/decorators';
+import type { AuthenticatedRequest } from 'src/infrastructure/security/jwt.strategy';
 
 @Controller('auth')
 export class AuthController {
@@ -26,20 +27,23 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('totp/verify')
-  async verifyTotp(@Request() req: any, @Body() verifyTotpDto: VerifyTotpDto) {
+  async verifyTotp(
+    @Request() req: AuthenticatedRequest,
+    @Body() verifyTotpDto: VerifyTotpDto,
+  ) {
     return this.authService.verifyTotp(req.user.id, verifyTotpDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('totp/setup')
-  async setupTotp(@Request() req: any) {
+  async setupTotp(@Request() req: AuthenticatedRequest) {
     return this.authService.setupTotp(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('totp/confirm')
   async confirmTotpSetup(
-    @Request() req: any,
+    @Request() req: AuthenticatedRequest,
     @Body() setupTotpDto: SetupTotpDto,
   ) {
     return this.authService.confirmTotpSetup(req.user.id, setupTotpDto);
@@ -47,13 +51,16 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('totp/disable')
-  async disableTotp(@Request() req: any, @Body() verifyTotpDto: VerifyTotpDto) {
+  async disableTotp(
+    @Request() req: AuthenticatedRequest,
+    @Body() verifyTotpDto: VerifyTotpDto,
+  ) {
     return this.authService.disableTotp(req.user.id, verifyTotpDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')
-  async getProfile(@Request() req: any) {
+  async getProfile(@Request() req: AuthenticatedRequest) {
     return this.authService.getProfile(req.user.id);
   }
 
@@ -65,7 +72,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  async logout(@Request() req: any) {
+  async logout(@Request() req: AuthenticatedRequest) {
     return this.authService.logout(req.user.id);
   }
 }

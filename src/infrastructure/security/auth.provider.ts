@@ -47,8 +47,8 @@ export class AuthProvider implements IAuthProvider {
     }
   }
 
-  generateTOTP(secret: string): string {
-    return this.totp.generateSecret();
+  async generateTOTP(secret: string): Promise<string> {
+    return this.totp.generate({ secret });
   }
 
   async verifyTOTP(token: string, secret: string): Promise<boolean> {

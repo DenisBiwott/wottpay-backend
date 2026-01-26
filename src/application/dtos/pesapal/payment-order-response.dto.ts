@@ -5,6 +5,7 @@ export class PaymentOrderResponseDto {
   merchantRef: string;
   trackingId: string;
   businessId: string;
+  userId: string;
   amount: number;
   currency: string;
   status: string;
@@ -19,6 +20,7 @@ export class PaymentOrderResponseDto {
     dto.merchantRef = entity.merchantRef;
     dto.trackingId = entity.trackingId;
     dto.businessId = entity.businessId;
+    dto.userId = entity.userId;
     dto.amount = entity.amount;
     dto.currency = entity.currency;
     dto.status = entity.status;
