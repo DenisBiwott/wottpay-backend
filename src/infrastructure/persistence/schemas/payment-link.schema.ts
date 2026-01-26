@@ -14,6 +14,9 @@ export class PaymentLink extends Document {
   @Prop({ required: true, index: true })
   businessId: string;
 
+  @Prop({ required: true, index: true })
+  userId: string;
+
   @Prop({ required: true })
   amount: number;
 

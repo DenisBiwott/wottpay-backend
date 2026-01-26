@@ -1,6 +1,6 @@
-# WottPay Authentication Guide
+# WottPay Authentication & Authorization Guide
 
-This document describes the authentication system implemented in WottPay, including JWT-based authentication, two-factor authentication (TOTP), and route protection mechanisms.
+This document describes the authentication and authorization system implemented in WottPay, including JWT-based authentication, two-factor authentication (TOTP), Role-Based Access Control (RBAC), and route protection mechanisms.
 
 ## Overview
 
@@ -11,6 +11,7 @@ WottPay implements a secure authentication system with the following components:
 | Passport.js           | Authentication middleware framework   |
 | JWT (JSON Web Tokens) | Stateless session management          |
 | Refresh Tokens        | Long-lived tokens for session renewal |
+| RBAC                  | Role-Based Access Control             |
 | bcrypt                | Password hashing                      |
 | otplib (TOTP)         | Time-based one-time passwords for 2FA |
 
@@ -372,12 +373,46 @@ export class TotpVerifiedGuard implements CanActivate {
 }
 ```
 
+### RolesGuard
+
+Restricts access based on user roles. Works with the `@Roles()` decorator.
+
+```typescript
+// src/infrastructure/security/roles.guard.ts
+@Injectable()
+export class RolesGuard implements CanActivate {
+  constructor(private reflector: Reflector) {}
+
+  canActivate(context: ExecutionContext): boolean {
+    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
+      ROLES_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (!requiredRoles || requiredRoles.length === 0) {
+      return true;
+    }
+
+    const user = request.user;
+    const hasRole = requiredRoles.includes(user.role as UserRole);
+    if (!hasRole) {
+      throw new ForbiddenException(
+        `Access denied: Required roles are ${requiredRoles.join(', ')}`,
+      );
+    }
+
+    return true;
+  }
+}
+```
+
 ### Decorators
 
 ```typescript
 // src/infrastructure/security/decorators.ts
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
 export const RequireTotp = () => SetMetadata(REQUIRE_TOTP_KEY, true);
+export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
 ```
 
 ### Usage Examples
@@ -410,6 +445,98 @@ async getProfile(@Request() req: any) {
 @Post('sensitive-operation')
 async sensitiveOperation(@Request() req: any) {
   // Only accessible after TOTP verification
+}
+```
+
+**Protected route with role restriction:**
+
+```typescript
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN, UserRole.MERCHANT)
+@Post('payments/orders')
+async createPaymentOrder(@Body() dto: CreatePaymentOrderDto, @Request() req) {
+  // Only ADMIN and MERCHANT roles can access
+  return this.paymentService.createPaymentOrder(dto, req.user.id);
+}
+```
+
+**Admin-only route:**
+
+```typescript
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.ADMIN)
+@Get('event-logs')
+async getEventLogs(@Request() req) {
+  // Only ADMIN can access event logs
+  return this.eventLogService.getEventsByBusiness(req.user.businessId);
+}
+```
+
+## Role-Based Access Control (RBAC)
+
+WottPay implements a role-based access control system with three user roles.
+
+### User Roles
+
+```typescript
+// src/domain/enums/user-role.enum.ts
+export enum UserRole {
+  ADMIN = 'ADMIN',
+  MERCHANT = 'MERCHANT',
+  READ_ONLY = 'READ_ONLY',
+}
+```
+
+| Role      | Description                                              |
+| --------- | -------------------------------------------------------- |
+| ADMIN     | Full access to all features, user management, event logs |
+| MERCHANT  | Can create payments, view own transactions and links     |
+| READ_ONLY | View-only access to transactions, links, and insights    |
+
+### Permission Matrix
+
+| Action                 | ADMIN | MERCHANT | READ_ONLY |
+| ---------------------- | ----- | -------- | --------- |
+| Create Payment         | Yes   | Yes      | No        |
+| View All Transactions  | Yes   | No       | No        |
+| View Own Transactions  | Yes   | Yes      | Yes       |
+| View All Payment Links | Yes   | No       | No        |
+| View Own Payment Links | Yes   | Yes      | Yes       |
+| View Insights          | Yes   | Yes      | Yes       |
+| View Event Logs        | Yes   | No       | No        |
+| Manage Users           | Yes   | No       | No        |
+| Manage Business        | Yes   | No       | No        |
+| Register IPN           | Yes   | No       | No        |
+| Cancel Payment         | Yes   | Yes      | No        |
+
+### Data Scoping
+
+RBAC also controls data visibility:
+
+- **ADMIN**: Can see all transactions and payment links for their business
+- **MERCHANT/READ_ONLY**: Can only see their own transactions and payment links
+
+```typescript
+// Example: Transactions endpoint with role-based scoping
+async getTransactions(userId, businessId, role, filters) {
+  if (role === UserRole.ADMIN) {
+    return findByBusinessId(businessId, filters); // All business transactions
+  }
+  return findByUserIdAndBusinessId(userId, businessId, filters); // Own transactions only
+}
+```
+
+### JWT Payload with Roles
+
+The JWT payload includes role and businessId:
+
+```typescript
+interface JwtPayload {
+  sub: string; // User ID
+  email: string; // User email
+  role: string; // UserRole (ADMIN, MERCHANT, READ_ONLY)
+  businessId: string; // Associated business ID
+  totpVerified?: boolean;
 }
 ```
 
@@ -522,16 +649,18 @@ JWT_EXPIRES_IN=3600
 
 ## Key Files Reference
 
-| File                                                 | Purpose                                 |
-| ---------------------------------------------------- | --------------------------------------- |
-| `src/infrastructure/security/jwt.strategy.ts`        | JWT validation strategy                 |
-| `src/infrastructure/security/jwt-auth.guard.ts`      | Authentication guard                    |
-| `src/infrastructure/security/totp-verified.guard.ts` | 2FA verification guard                  |
-| `src/infrastructure/security/auth.provider.ts`       | JWT and TOTP generation/verification    |
-| `src/infrastructure/security/decorators.ts`          | @Public() and @RequireTotp() decorators |
-| `src/application/use-cases/auth/auth.service.ts`     | Authentication business logic           |
-| `src/api/controllers/auth.controller.ts`             | Auth API endpoints                      |
-| `src/infrastructure/modules/auth.module.ts`          | Module configuration                    |
-| `src/domain/entities/user.entity.ts`                 | User entity with auth fields            |
-| `src/domain/services/iauth.provider.ts`              | Auth provider interface                 |
-| `src/application/dtos/auth/*.ts`                     | Auth request/response DTOs              |
+| File                                                 | Purpose                                            |
+| ---------------------------------------------------- | -------------------------------------------------- |
+| `src/infrastructure/security/jwt.strategy.ts`        | JWT validation strategy                            |
+| `src/infrastructure/security/jwt-auth.guard.ts`      | Authentication guard                               |
+| `src/infrastructure/security/totp-verified.guard.ts` | 2FA verification guard                             |
+| `src/infrastructure/security/roles.guard.ts`         | Role-based access control guard                    |
+| `src/infrastructure/security/auth.provider.ts`       | JWT and TOTP generation/verification               |
+| `src/infrastructure/security/decorators.ts`          | @Public(), @RequireTotp(), and @Roles() decorators |
+| `src/application/use-cases/auth/auth.service.ts`     | Authentication business logic                      |
+| `src/api/controllers/auth.controller.ts`             | Auth API endpoints                                 |
+| `src/infrastructure/modules/auth.module.ts`          | Module configuration                               |
+| `src/domain/entities/user.entity.ts`                 | User entity with auth fields                       |
+| `src/domain/enums/user-role.enum.ts`                 | User role enumeration                              |
+| `src/domain/services/iauth.provider.ts`              | Auth provider interface                            |
+| `src/application/dtos/auth/*.ts`                     | Auth request/response DTOs                         |

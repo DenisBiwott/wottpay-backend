@@ -9,6 +9,12 @@ export class PaymentTransaction extends Document {
   paymentLinkId: string;
 
   @Prop({ required: true, index: true })
+  userId: string;
+
+  @Prop({ required: true, index: true })
+  businessId: string;
+
+  @Prop({ required: true, index: true })
   orderTrackingId: string;
 
   @Prop({ required: true, index: true })

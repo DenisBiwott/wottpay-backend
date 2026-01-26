@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -22,11 +22,14 @@ import { AuthProvider } from 'src/infrastructure/security/auth.provider';
 import { JwtStrategy } from 'src/infrastructure/security/jwt.strategy';
 import { JwtAuthGuard } from 'src/infrastructure/security/jwt-auth.guard';
 import { TotpVerifiedGuard } from 'src/infrastructure/security/totp-verified.guard';
+import { RolesGuard } from 'src/infrastructure/security/roles.guard';
 import { AuthService } from 'src/application/use-cases/auth/auth.service';
 import { AuthController } from 'src/api/controllers/auth.controller';
+import { EventLogModule } from './event-log.module';
 
 @Module({
   imports: [
+    forwardRef(() => EventLogModule),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -58,6 +61,7 @@ import { AuthController } from 'src/api/controllers/auth.controller';
     JwtStrategy,
     JwtAuthGuard,
     TotpVerifiedGuard,
+    RolesGuard,
     {
       provide: 'IUserRepository',
       useClass: UserRepository,
@@ -75,6 +79,12 @@ import { AuthController } from 'src/api/controllers/auth.controller';
       useClass: AuthProvider,
     },
   ],
-  exports: [AuthService, JwtAuthGuard, TotpVerifiedGuard, 'IAuthProvider'],
+  exports: [
+    AuthService,
+    JwtAuthGuard,
+    TotpVerifiedGuard,
+    RolesGuard,
+    'IAuthProvider',
+  ],
 })
 export class AuthModule {}

@@ -7,7 +7,20 @@ export interface JwtPayload {
   sub: string;
   email: string;
   role: string;
+  businessId: string;
   totpVerified?: boolean;
+}
+
+export interface AuthenticatedUser {
+  id: string;
+  email: string;
+  role: string;
+  businessId: string;
+  totpVerified?: boolean;
+}
+
+export interface AuthenticatedRequest {
+  user: AuthenticatedUser;
 }
 
 @Injectable()
@@ -21,11 +34,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(req: any, payload: JwtPayload) {
+  validate(_req: unknown, payload: JwtPayload): AuthenticatedUser {
     return {
       id: payload.sub,
       email: payload.email,
       role: payload.role,
+      businessId: payload.businessId,
       totpVerified: payload.totpVerified,
     };
   }

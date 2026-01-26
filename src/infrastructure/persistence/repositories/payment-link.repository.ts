@@ -5,6 +5,19 @@ import { PaymentLink as PaymentLinkDocument } from 'src/infrastructure/persisten
 import { PaymentLink } from 'src/domain/entities/payment-link.entity';
 import { IPaymentLinkRepository } from 'src/domain/repositories/payment-link.repo';
 import { PaymentStatus } from 'src/domain/enums/payment-status.enum';
+import { PaymentLinkFilters } from 'src/domain/interfaces/payment-link-filters.interface';
+
+interface DateQuery {
+  $gte?: Date;
+  $lte?: Date;
+}
+
+interface PaymentLinkFilterQuery {
+  businessId?: string;
+  userId?: string;
+  status?: PaymentStatus;
+  createdAt?: DateQuery;
+}
 
 @Injectable()
 export class PaymentLinkRepository implements IPaymentLinkRepository {
@@ -18,6 +31,7 @@ export class PaymentLinkRepository implements IPaymentLinkRepository {
       merchantRef: link.merchantRef,
       trackingId: link.trackingId,
       businessId: link.businessId,
+      userId: link.userId,
       amount: link.amount,
       currency: link.currency,
       status: link.status,
@@ -66,12 +80,72 @@ export class PaymentLinkRepository implements IPaymentLinkRepository {
     return docs.map((doc) => this.toDomainEntity(doc));
   }
 
+  async findByUserIdAndBusinessId(
+    userId: string,
+    businessId: string,
+    filters?: PaymentLinkFilters,
+  ): Promise<PaymentLink[]> {
+    const query = this.buildFilterQuery({ userId, businessId }, filters);
+    const docs = await this.paymentLinkModel
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(filters?.skip || 0)
+      .limit(filters?.limit || 50)
+      .exec();
+    return docs.map((doc) => this.toDomainEntity(doc));
+  }
+
+  async findAllByBusinessWithFilters(
+    businessId: string,
+    filters?: PaymentLinkFilters,
+  ): Promise<PaymentLink[]> {
+    const query = this.buildFilterQuery({ businessId }, filters);
+    const docs = await this.paymentLinkModel
+      .find(query)
+      .sort({ createdAt: -1 })
+      .skip(filters?.skip || 0)
+      .limit(filters?.limit || 50)
+      .exec();
+    return docs.map((doc) => this.toDomainEntity(doc));
+  }
+
+  async countByBusinessIdAndStatus(
+    businessId: string,
+    status: PaymentStatus,
+  ): Promise<number> {
+    return this.paymentLinkModel.countDocuments({ businessId, status }).exec();
+  }
+
+  private buildFilterQuery(
+    baseQuery: PaymentLinkFilterQuery,
+    filters?: PaymentLinkFilters,
+  ): PaymentLinkFilterQuery {
+    const query: PaymentLinkFilterQuery = { ...baseQuery };
+
+    if (filters?.startDate || filters?.endDate) {
+      query.createdAt = {};
+      if (filters.startDate) {
+        query.createdAt.$gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        query.createdAt.$lte = filters.endDate;
+      }
+    }
+
+    if (filters?.status) {
+      query.status = filters.status;
+    }
+
+    return query;
+  }
+
   private toDomainEntity(doc: PaymentLinkDocument): PaymentLink {
     return new PaymentLink(
       doc._id.toString(),
       doc.merchantRef,
       doc.trackingId,
       doc.businessId,
+      doc.userId,
       doc.amount,
       doc.currency,
       doc.status as PaymentStatus,

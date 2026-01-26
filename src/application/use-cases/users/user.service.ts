@@ -13,6 +13,8 @@ import { UserRole } from 'src/domain/enums/user-role.enum';
 import { CreateUserDto } from 'src/application/dtos/user/create-user.dto';
 import { UpdateUserDto } from 'src/application/dtos/user/update-user.dto';
 import { UserResponseDto } from 'src/application/dtos/user/user-response.dto';
+import { EventLogService } from '../event-logs/event-log.service';
+import { EventAction } from 'src/domain/enums/event-action.enum';
 
 interface UserUpdateData {
   email?: string;
@@ -29,6 +31,7 @@ export class UserService {
     private readonly userRepository: IUserRepository,
     @Inject('IBusinessRepository')
     private readonly businessRepository: IBusinessRepository,
+    private readonly eventLogService: EventLogService,
   ) {}
 
   async create(dto: CreateUserDto): Promise<UserResponseDto> {
@@ -54,6 +57,17 @@ export class UserService {
     );
 
     const createdUser = await this.userRepository.create(user);
+
+    // Log user created event
+    await this.eventLogService.logEvent(
+      EventAction.USER_CREATED,
+      createdUser.id,
+      createdUser.businessId,
+      'User',
+      createdUser.id,
+      { email: createdUser.email, role: createdUser.role },
+    );
+
     return UserResponseDto.fromEntity(createdUser, business);
   }
 
@@ -100,6 +114,33 @@ export class UserService {
     };
   }
 
+  async findAllByBusiness(
+    businessId: string,
+    page: number = 1,
+    limit: number = 10,
+  ): Promise<{
+    data: UserResponseDto[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    const skip = (page - 1) * limit;
+    const [users, total, business] = await Promise.all([
+      this.userRepository.findAllByBusiness(businessId, { skip, limit }),
+      this.userRepository.countByBusiness(businessId),
+      this.businessRepository.findById(businessId),
+    ]);
+
+    return {
+      data: users.map((user) =>
+        UserResponseDto.fromEntity(user, business ?? undefined),
+      ),
+      total,
+      page,
+      limit,
+    };
+  }
+
   async update(id: string, dto: UpdateUserDto): Promise<UserResponseDto> {
     const user = await this.userRepository.findById(id);
     if (!user) {
@@ -134,6 +175,17 @@ export class UserService {
     const business = await this.businessRepository.findById(
       updatedUser!.businessId,
     );
+
+    // Log user updated event
+    await this.eventLogService.logEvent(
+      EventAction.USER_UPDATED,
+      updatedUser!.id,
+      updatedUser!.businessId,
+      'User',
+      updatedUser!.id,
+      { email: updatedUser!.email, updatedFields: Object.keys(updateData) },
+    );
+
     return UserResponseDto.fromEntity(updatedUser!, business ?? undefined);
   }
 
@@ -142,6 +194,18 @@ export class UserService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    const { email, businessId } = user;
     await this.userRepository.delete(id);
+
+    // Log user deleted event
+    await this.eventLogService.logEvent(
+      EventAction.USER_DELETED,
+      id,
+      businessId,
+      'User',
+      id,
+      { email },
+    );
   }
 }

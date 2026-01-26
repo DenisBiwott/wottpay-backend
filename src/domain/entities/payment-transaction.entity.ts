@@ -4,6 +4,8 @@ export class PaymentTransaction {
   constructor(
     public id: string,
     public paymentLinkId: string,
+    public userId: string,
+    public businessId: string,
     public orderTrackingId: string,
     public merchantReference: string,
     public paymentMethod: string,

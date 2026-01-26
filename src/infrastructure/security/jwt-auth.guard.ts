@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Reflector } from '@nestjs/core';
+import type { AuthenticatedUser } from './jwt.strategy';
 
 export const IS_PUBLIC_KEY = 'isPublic';
 
@@ -25,7 +26,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     return super.canActivate(context);
   }
 
-  handleRequest(err: Error | null, user: any) {
+  handleRequest<TUser = AuthenticatedUser>(
+    err: Error | null,
+    user: TUser | false,
+  ): TUser {
     if (err || !user) {
       throw err || new UnauthorizedException('Invalid or missing token');
     }

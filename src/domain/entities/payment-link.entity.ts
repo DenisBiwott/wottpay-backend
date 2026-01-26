@@ -6,6 +6,7 @@ export class PaymentLink {
     public merchantRef: string,
     public trackingId: string,
     public businessId: string,
+    public userId: string,
     public amount: number,
     public currency: string,
     public status: PaymentStatus,
