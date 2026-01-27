@@ -17,12 +17,14 @@ import { CreateBusinessDto } from 'src/application/dtos/business/create-business
 import { UpdateBusinessDto } from 'src/application/dtos/business/update-business.dto';
 import { UpdateCredentialsDto } from 'src/application/dtos/business/update-credentials.dto';
 import { JwtAuthGuard } from 'src/infrastructure/security/jwt-auth.guard';
+import { Public } from 'src/infrastructure/security/decorators';
 
 @Controller('businesses')
 @UseGuards(JwtAuthGuard)
 export class BusinessController {
   constructor(private readonly businessService: BusinessService) {}
 
+  @Public()
   @Post()
   async create(@Body() createBusinessDto: CreateBusinessDto) {
     return this.businessService.create(createBusinessDto);
