@@ -18,7 +18,7 @@ import { CreateUserDto } from 'src/application/dtos/user/create-user.dto';
 import { UpdateUserDto } from 'src/application/dtos/user/update-user.dto';
 import { JwtAuthGuard } from 'src/infrastructure/security/jwt-auth.guard';
 import { RolesGuard } from 'src/infrastructure/security/roles.guard';
-import { Roles } from 'src/infrastructure/security/decorators';
+import { Public, Roles } from 'src/infrastructure/security/decorators';
 import { UserRole } from 'src/domain/enums/user-role.enum';
 import type { AuthenticatedRequest } from 'src/infrastructure/security/jwt.strategy';
 
@@ -27,17 +27,12 @@ import type { AuthenticatedRequest } from 'src/infrastructure/security/jwt.strat
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Roles(UserRole.ADMIN)
+  @Public()
   @Post()
   async create(
     @Body() createUserDto: CreateUserDto,
     @Request() req: AuthenticatedRequest,
   ) {
-    if (createUserDto.businessId !== req.user.businessId) {
-      throw new ForbiddenException(
-        'Cannot create users for a different business',
-      );
-    }
     return this.userService.create(createUserDto);
   }
 
