@@ -11,7 +11,7 @@ import type { AuthenticatedRequest } from 'src/infrastructure/security/jwt.strat
 export class EventLogController {
   constructor(private readonly eventLogService: EventLogService) {}
 
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.MERCHANT, UserRole.READ_ONLY)
   @Get()
   async getEventLogs(
     @Request() req: AuthenticatedRequest,
