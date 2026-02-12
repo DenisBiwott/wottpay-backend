@@ -28,7 +28,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install ONLY production dependencies (no Nest CLI, no test tools)
-RUN npm install --  only=production
+RUN npm install --only=production
 
 # Copy the compiled code from the builder stage
 COPY --from=builder /app/dist ./dist
