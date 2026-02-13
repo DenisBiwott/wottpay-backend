@@ -214,6 +214,7 @@ WottPay implements a role-based access control system with three user roles:
 
 - [Architecture Guide](./docs/ARCHITECTURE.md) - Detailed architecture documentation
 - [Authentication Guide](./docs/AUTHENTICATION.md) - Authentication and authorization documentation
+- [Deploy & CI/CD Guide](./docs/DEPLOY-ARCHITECTURE.md) - Deploy, server structure & CI/CD documetation
 
 ## License
 
