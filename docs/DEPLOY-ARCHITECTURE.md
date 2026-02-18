@@ -66,7 +66,7 @@ Manages multiple domains and environments:
 **Production nginx.conf**
 
 ```nginx
-# 1. ROOT DOMAIN: Portfolio / Coming Soon
+# ROOT DOMAIN → portfolio
 server {
     listen 443 ssl;
     server_name denisbiwott.com www.denisbiwott.com;
@@ -74,58 +74,43 @@ server {
     ssl_certificate     /etc/nginx/certs/origin.pem;
     ssl_certificate_key /etc/nginx/certs/privkey.key;
 
-    location / {
-        root /usr/share/nginx/portfolio;
-        index index.html;
-    }
+    root /usr/share/nginx/portfolio;
+    index index.html;
 }
 
-# 2. SUBDOMAIN: Wottpay Project
+# SUBDOMAIN → app
 server {
     listen 443 ssl;
     server_name pay.denisbiwott.com;
 
-    resolver 127.0.0.11 valid=30s;
-
     ssl_certificate     /etc/nginx/certs/origin.pem;
     ssl_certificate_key /etc/nginx/certs/privkey.key;
 
+    root /usr/share/nginx/frontend;
+    index index.html;
+
+    # SPA routing support
     location / {
-        proxy_pass http://frontend:80;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        # Support for Vue Router History Mode
-        # If the file isn't found on the frontend, tell the frontend to serve index.html
-        # This handles the 404s for Vue Router internally
-        proxy_intercept_errors on;
-        error_page 404 = @fallback;
+        try_files $uri $uri/ /index.html;
     }
 
-    location @fallback {
-        proxy_pass http://frontend:80;
-    }
-
+    # Backend proxy
     location /api/ {
         proxy_pass http://backend:3000/;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_cache_bypass $http_upgrade;
     }
 }
 
-# 3. HTTP to HTTPS Global Redirect
+# HTTP → HTTPS redirect
 server {
     listen 80;
     server_name denisbiwott.com www.denisbiwott.com pay.denisbiwott.com;
     return 301 https://$host$request_uri;
 }
+
 ```
 
 - The trailing slash in `proxy_pass` ensures `/api` is stripped before hitting backend routes.
@@ -135,13 +120,17 @@ server {
 ### 3.2 Docker Orchestration (`compose.yaml`)
 
 - **Volumes:**
-  - Maps `nginx.conf`, `certs/`, and `portfolio/` from host to gateway container using bind mounts.
+  - Maps `nginx.conf`, `certs/`, `frontend_dist` and `portfolio/` from host to gateway container using bind mounts.
 
 - **Security:**
   - Only the gateway exposes ports 80 and 443.
   - Frontend and backend containers communicate over `wottpay-network`.
 
 - **Prod Compose.yaml:**
+  Frontend static files flow:
+  Frontend container → builds → /app/dist → frontend_dist volume
+  Gateway container → mounts → /usr/share/nginx/frontend → serves files
+  Browser → hits gateway → Nginx serves static + SPA fallback → Vue router handles routes
 
 ```yaml
 services:
@@ -152,25 +141,23 @@ services:
       - '80:80'
       - '443:443'
     volumes:
-      # Map the nginx.conf from server's current directory into the container
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-
-      # Map the certs folder containing your Cloudflare keys
       - ./certs:/etc/nginx/certs:ro
-
-      # Map portfolio site folder to container (Temporarily serving static HTML)
       - ./portfolio:/usr/share/nginx/portfolio:ro
+      # Map frontend_dist to have access to frontend static files & serve directly
+      - frontend_dist:/usr/share/nginx/frontend:ro
     depends_on:
-      - frontend
       - backend
     networks:
       - wottpay-network
 
   frontend:
     build: ./wottpay-frontend
+    # Share build output via Docker volume: Map the container’s /app/dist → the named volume frontend_dist
+    volumes:
+      - frontend_dist:/app/dist
     networks:
       - wottpay-network
-    restart: always
 
   backend:
     build: ./wottpay-backend
@@ -179,10 +166,13 @@ services:
       - wottpay-network
     restart: always
 
-# The custom network for inter-service communication (Isolation, Only services in this network can communicate with each other)
 networks:
   wottpay-network:
     driver: bridge
+
+volumes:
+  # For frontend static files
+  frontend_dist:
 ```
 
 ---
